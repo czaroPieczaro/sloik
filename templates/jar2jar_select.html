@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+
+{% block head %}
+<title>Jar Master</title>
+{% endblock %}
+
+{% block body %}
+<div class="content">
+    <h1 style="text-align: center">Choose jar to take money from</h1>
+
+    <form action="/jar2jar" method="POST">
+            <select name="id">
+                {% for jar in jars %}
+                <option value={{jar.id}}>{{jar}}</option>
+                {% endfor %}
+            </select>
+                    <input type="submit" value="Next">
+
+    </form>
+
+</div>
+{% endblock %}

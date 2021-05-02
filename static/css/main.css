@@ -3,14 +3,25 @@ body {
     font-family: sans-serif;
 }
 
-th, td {
-	border-bottom: 1px solid black;
-}
 
 tr:not(:first-child):hover {background-color: #4CAF50;}
 
+tr {
+  border-bottom: 1px solid #ddd;
+}
+
+td {
+    text-align: center;
+}
+table {
+  border-collapse: collapse; /* Collapse borders */
+  width: 100%; /* Full-width */
+  border: 1px solid #ddd; /* Add a grey border */
+  font-size: 18px; /* Increase font-size */
+}
+
 div {
-  width:300px;
+  width:600px;
   margin-left: auto;
   margin-right: auto;
 }

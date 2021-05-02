@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+
+{% block head %}
+<title>Jar Master</title>
+{% endblock %}
+
+{% block body %}
+<div class="content">
+    <h1 style="text-align: center">Jar {{jar.id}}</h1>
+    {% include 'jar_table.html' %}
+    <h3>Available actions:</h3>
+    <h4><a href="/jar/add/{{jar.id}}">Add</a></h4>
+    {% if jar.balance > 0 %}
+    <h4><a href="/jar/withdraw/{{jar.id}}">Withdraw</a></h4>
+    <h4><a href="/jar2jar/{{jar.id}}">Transfer money to the other jar</a></h4>
+    {% endif %}
+    <h4><a href="/operations/{{jar.id}}">Show history for jar {{jar.id}}</a></h4>
+    <h4><a href="/">See all jars</a></h4>
+
+</div>
+{% endblock %}

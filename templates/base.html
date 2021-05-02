@@ -2,10 +2,12 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <script src="https://www.kryogenix.org/code/browser/sorttable/sorttable.js"></script>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
     {% block head %}{% endblock %}
 </head>
 <body>
+    <h2 style="text-align: center; margin-left:auto; margin-right:auto"><a href="/">Home</a></h2>
     {% block body %}{% endblock %}
 </body>
 </html>

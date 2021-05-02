@@ -1,0 +1,38 @@
+{% extends 'base.html' %}
+
+{% block head %}
+<title>Jar Master</title>
+{% endblock %}
+
+{% block body %}
+<div class="content">
+    <h1 style="text-align: center">Operations</h1>
+    {% if id %}
+    <h2>History for jar {{id}}</h2>
+    {% else %}
+    <h2>All jars</h2>
+    {% endif %}
+    {% if not operations %}
+    <h4>No operations yet!</h4>
+    {% else %}
+    <table class="searchable sortable">
+        <thead>
+        <tr>
+            <th>Jar ID</th>
+            <th>Datetime</th>
+            <th>Title</th>
+            <th>Value</th>
+        </tr>
+        </thead>
+    {% for operation in operations %}
+        <tr>
+            <td>{{operation.jar_id}}</td>
+            <td>{{operation.datetime_short}}</td>
+            <td>{{operation.title}}</td>
+            <td>{{operation.value}}</td>
+        </tr>
+    {% endfor %}
+    </table>
+    {% endif %}
+</div>
+{% endblock %}
