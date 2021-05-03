@@ -18,6 +18,24 @@ class Jar(db.Model):
     def __repr__(self):
         return 'Jar %r: %s %s' % (self.id, self.balance, self.currency)
 
+    def charge(self, amount, title):
+        self.transfer(amount * -1, title)
+
+    def credit(self, amount, title):
+        self.transfer(amount, title)
+
+    def transfer(self, amount, title):
+        """
+        :param amount: decimal
+        :param title: string
+        """
+
+        self.balance += amount
+        operation = Operation(jar_id=self.id, value=amount, title=title)
+        db.session.add(self)
+        db.session.add(operation)
+        db.session.commit()
+
 
 class Operation(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -80,7 +98,7 @@ def add(id):
         amount = Decimal(request.form['amount'])
         title = request.form['title']
         try:
-            transfer(True, amount, title, jar)
+            jar.credit(amount, title)
             return redirect("/jar/%s" % id)
         except:
             return "There was an issue adding money to the jar."
@@ -99,7 +117,7 @@ def withdraw(id):
         amount = Decimal(request.form['amount'])
         title = request.form['title']
         try:
-            transfer(False, amount, title, jar)
+            jar.charge(amount, title)
             return redirect("/jar/%s" % id)
         except:
             return "There was an issue withdrawing money from the jar."
@@ -114,7 +132,6 @@ def jar2jar_transfer_select():
 
     if request.method == 'POST':
         id = request.form['id']
-        print(id)
         return redirect('/jar2jar/%s' % id)
 
     if not jars:
@@ -131,45 +148,36 @@ def jar2jar_transfer(id):
         amount = Decimal(request.form['amount'])
         jar_credited = Jar.query.get_or_404(request.form['jar_credited_id'])
         title = request.form['title']
-        transfer(False, amount, title, jar_charged)
-        transfer(True, amount, title, jar_credited)
+        jar_charged.charge(amount, title)
+        jar_credited.credit(amount, title)
         return redirect('/')
 
     return render_template("jar2jar.html", jar_charged=jar_charged, valid_jars=valid_jars)
 
 
-@app.route('/operations')
+@app.route('/operations', methods=['GET', 'POST'])
 def operations():
-    operations = Operation.query.all()
+    all_operations = Operation.query.all()
+    jar_ids = list(set([operation.jar_id for operation in all_operations]))
+    jars = [Jar.query.get_or_404(jar_id) for jar_id in jar_ids]
 
-    return render_template("operations.html", operations=operations, id=None)
+    if request.method == 'POST':
+        id = int(request.form['id'])
+        operations = Operation.query.filter_by(jar_id=id).all()
+    else:
+        id = None
+        operations = all_operations
+
+    return render_template("operations.html", operations=operations, jars=jars, id=id)
 
 
-@app.route('/operations/<int:id>')
+@app.route('/operations/<int:id>', methods=['GET', 'POST'])
 def operations_single_jar(id):
     operations = Operation.query.filter_by(jar_id=id).all()
+    jar_ids = list(set([operation.jar_id for operation in Operation.query.all()]))
+    jars = [Jar.query.get_or_404(jar_id) for jar_id in jar_ids]
 
-    return render_template("operations.html", operations=operations, id=id)
-
-
-### Helpers
-def transfer(debit, amount, title, jar):
-    """
-    :param debit: boolean
-    :param amount: decimal
-    :param title: string
-    :param jar: Jar
-    """
-
-    if debit:
-        jar.balance += amount
-    else:
-        jar.balance -= amount
-
-    operation = Operation(jar_id=jar.id, value=amount, title=title)
-    db.session.add(jar)
-    db.session.add(operation)
-    db.session.commit()
+    return render_template("operations.html", operations=operations, jars=jars, id=id)
 
 
 if __name__ == "__main__":

@@ -15,6 +15,19 @@
     {% if not operations %}
     <h4>No operations yet!</h4>
     {% else %}
+    <form action="/operations", method="POST">
+        <select name="id">
+            {% for jar in jars %}
+                {% if jar.id == id%}
+                    <option value={{jar.id}} selected>{{jar}}</option>
+                {% else %}
+                    <option value={{jar.id}}>{{jar}}</option>
+                {% endif %}
+            {% endfor %}
+        </select>
+        <input type="submit" value="Filter">
+    </form>
+    <br>
     <table class="searchable sortable">
         <thead>
         <tr>
