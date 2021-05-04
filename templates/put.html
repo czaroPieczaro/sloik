@@ -10,10 +10,10 @@
     <h2><a href="/jar/{{jar.id}}">Jar {{jar.id}}</a></h2>
     {% include 'jar_table.html' %}
 
-    <form action="/jar/add/{{jar.id}}" method="POST">
+    <form action="/jar/put/{{jar.id}}" method="POST">
             <input type="number" step="0.01" name="amount" id="amount" min=0 placeholder="Enter amount..." required="required">
             <input type="text" name="title" id="title" placeholder="Enter title" required="required">
-            <input type="submit" value="Add money">
+            <input type="submit" value="Put money">
     </form>
 
 </div>

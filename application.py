@@ -4,44 +4,50 @@ from datetime import datetime
 from decimal import Decimal
 
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///test.db'
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+app.config.from_object('config.DevelopmentConfig')
 db = SQLAlchemy(app)
 
 
 class Jar(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    balance = db.Column(db.Numeric(38, 2), default=0)
+    balance_low_denom = db.Column(db.Integer, default=0)
     currency = db.Column(db.String, nullable=False)
     operations = db.relationship('Operation', backref='jar', cascade='all, delete-orphan')
 
     def __repr__(self):
         return 'Jar %r: %s %s' % (self.id, self.balance, self.currency)
 
-    def charge(self, amount, title):
-        self.transfer(amount * -1, title)
+    def charge(self, amount_decimal, title):
+        self.transfer(amount_decimal * -1, title)
 
-    def credit(self, amount, title):
-        self.transfer(amount, title)
+    def credit(self, amount_decimal, title):
+        self.transfer(amount_decimal, title)
 
-    def transfer(self, amount, title):
+    def transfer(self, amount_decimal, title):
         """
-        :param amount: decimal
+        :param amount_decimal: decimal
         :param title: string
         """
 
-        self.balance += amount
-        operation = Operation(jar_id=self.id, value=amount, title=title)
+        # Convert to lowest denomination
+        amount_low_denom = int(amount_decimal * 100)
+        self.balance_low_denom += amount_low_denom
+        operation = Operation(jar_id=self.id, value_low_denom=amount_low_denom, title=title)
         db.session.add(self)
         db.session.add(operation)
         db.session.commit()
+
+    @property
+    def balance(self):
+        return self.balance_low_denom / 100.0
 
 
 class Operation(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     datetime = db.Column(db.DateTime, default=datetime.utcnow)
     jar_id = db.Column(db.Integer, db.ForeignKey('jar.id'), nullable=False)
-    value = db.Column(db.Numeric(38, 2))
+    value_low_denom = db.Column(db.Integer)
     title = db.Column(db.String, nullable=False)
 
     def __repr__(self):
@@ -50,6 +56,10 @@ class Operation(db.Model):
     @property
     def datetime_short(self):
         return self.datetime.replace(microsecond=0)
+
+    @property
+    def value(self):
+        return self.value_low_denom / 100.0
 
 
 @app.route('/', methods=['POST', 'GET'])
@@ -64,7 +74,7 @@ def index():
             db.session.add(jar)
             db.session.commit()
             return redirect("/")
-        except:
+        except Exception:
             return "There was an issue adding new jar."
     else:
         return render_template("index.html", jars=jars)
@@ -77,7 +87,7 @@ def delete(id):
     try:
         db.session.delete(jar)
         db.session.commit()
-    except:
+    except Exception:
         return "There was an issue deleting jar."
 
     return redirect("/")
@@ -90,8 +100,8 @@ def jar(id):
     return render_template("jar.html", jar=jar)
 
 
-@app.route('/jar/add/<int:id>', methods=['GET', 'POST'])
-def add(id):
+@app.route('/jar/put/<int:id>', methods=['GET', 'POST'])
+def put_money(id):
     jar = Jar.query.get_or_404(id)
 
     if request.method == 'POST':
@@ -100,26 +110,26 @@ def add(id):
         try:
             jar.credit(amount, title)
             return redirect("/jar/%s" % id)
-        except:
-            return "There was an issue adding money to the jar."
+        except Exception:
+            return "There was an issue putting money into the jar."
 
     else:
-        return render_template("add.html", jar=jar)
+        return render_template("put.html", jar=jar)
 
 
 @app.route('/jar/withdraw/<int:id>', methods=['GET', 'POST'])
 def withdraw(id):
     jar = Jar.query.get_or_404(id)
-    if not jar.balance > 0:
-        return "Not possible to withdraw from jar %s" % id
 
     if request.method == 'POST':
         amount = Decimal(request.form['amount'])
+        if amount > jar.balance:
+            return "Illegal operation."
         title = request.form['title']
         try:
             jar.charge(amount, title)
             return redirect("/jar/%s" % id)
-        except:
+        except Exception:
             return "There was an issue withdrawing money from the jar."
 
     else:
@@ -147,6 +157,8 @@ def jar2jar_transfer(id):
     if request.method == 'POST':
         amount = Decimal(request.form['amount'])
         jar_credited = Jar.query.get_or_404(request.form['jar_credited_id'])
+        if amount > jar_charged.balance or jar_credited.currency != jar_charged.currency:
+            return "Illegal operation."
         title = request.form['title']
         jar_charged.charge(amount, title)
         jar_credited.credit(amount, title)
@@ -158,8 +170,7 @@ def jar2jar_transfer(id):
 @app.route('/operations', methods=['GET', 'POST'])
 def operations():
     all_operations = Operation.query.all()
-    jar_ids = list(set([operation.jar_id for operation in all_operations]))
-    jars = [Jar.query.get_or_404(jar_id) for jar_id in jar_ids]
+    jars = Jar.query.all()
 
     if request.method == 'POST':
         id = int(request.form['id'])
@@ -174,11 +185,10 @@ def operations():
 @app.route('/operations/<int:id>', methods=['GET', 'POST'])
 def operations_single_jar(id):
     operations = Operation.query.filter_by(jar_id=id).all()
-    jar_ids = list(set([operation.jar_id for operation in Operation.query.all()]))
-    jars = [Jar.query.get_or_404(jar_id) for jar_id in jar_ids]
+    jars = Jar.query.all()
 
     return render_template("operations.html", operations=operations, jars=jars, id=id)
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run()
