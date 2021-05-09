@@ -2,12 +2,18 @@ from flask import Flask, render_template, url_for, request, redirect
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
 from decimal import Decimal
+import os
 
 app = Flask(__name__)
 
-app.config.from_object('config.DevelopmentConfig')
-db = SQLAlchemy(app)
+if os.environ.get("FLASK_ENV") == 'development':
+    print('dev chosen')
+    app.config.from_object('config.DevelopmentConfig')
+else:
+    print('prod chosen')
+    app.config.from_object('config.ProductionConfig')
 
+db = SQLAlchemy(app)
 
 class Jar(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -191,4 +197,9 @@ def operations_single_jar(id):
 
 
 if __name__ == "__main__":
+    if not os.path.exists(db.engine.url.database):
+        print("Db doesn't exist. Creating...")
+        db.create_all()
+
     app.run()
+
